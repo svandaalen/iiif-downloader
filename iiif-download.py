@@ -40,7 +40,7 @@ def scrape_images_from_iiif_manifest(manifest_url, download_folder="iiif_images"
 
     if "items" in manifest:
         print("IIIF v3")
-        print(f"Downloading {len(manifest["items"])} images")
+        print(f"Downloading {len(manifest['items'])} images")
         for item in manifest["items"]:
             label = item.get("label", {}).get("none", [""])[0]
             filename = f"{label}.jpg"
@@ -59,7 +59,7 @@ def scrape_images_from_iiif_manifest(manifest_url, download_folder="iiif_images"
         print("IIIF v2")
         index = 1
         for sequence in manifest["sequences"]:
-            print(f"Downloading {len(sequence["canvases"])} images")
+            print(f"Downloading {len(sequence['canvases'])} images")
             for canvas in sequence["canvases"]:
                 filename = (
                     f"{canvas["label"]}.jpg" if "label" in canvas else f"{index}.jpg"
