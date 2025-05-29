@@ -62,7 +62,7 @@ def scrape_images_from_iiif_manifest(manifest_url, download_folder="iiif_images"
             print(f"Downloading {len(sequence['canvases'])} images")
             for canvas in sequence["canvases"]:
                 filename = (
-                    f"{canvas["label"]}.jpg" if "label" in canvas else f"{index}.jpg"
+                    f"{canvas['label']}.jpg" if "label" in canvas else f"{index}.jpg"
                 )
                 index += 1
                 for image in canvas["images"]:
