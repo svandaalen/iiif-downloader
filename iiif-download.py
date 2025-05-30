@@ -33,18 +33,19 @@ def download_image(url, folder, filename):
                         progress_bar.update(size)
                 print(f"Downloaded {filename}")
                 break
-        except requests.exceptions.Timeout:
+        except (requests.exceptions.Timeout, requests.exceptions.RequestException) as e:
             if attempt < max_retries:
                 wait_time = base_wait * (2 ** (attempt - 1))
                 print(
-                    f"Timeout occurred. Attempt {attempt} of {max_retries}. Retrying in {wait_time} seconds..."
+                    f"Error occurred: {str(e)}. Attempt {attempt} of {max_retries}. "
+                    f"Retrying in {wait_time} seconds..."
                 )
                 time.sleep(wait_time)
             else:
-                print("Max retries reached.")
-        except requests.exceptions.RequestException as e:
-            print(f"Request failed due to: {e}")
-            break
+                print(f"Max retries reached. Last error: {str(e)}")
+                raise Exception(
+                    f"Failed to download {filename} after {max_retries} attempts: {str(e)}"
+                ) from e
 
 
 def scrape_images_from_iiif_manifest(manifest_url, download_folder="iiif_images"):
