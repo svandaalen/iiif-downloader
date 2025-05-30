@@ -11,14 +11,16 @@ def download_image(url, folder, filename):
     base_wait = 60
     for attempt in range(1, max_retries + 1):
         try:
-            print(f"Downloading {filename} from {url}")
-            response = requests.get(url, stream=True, timeout=timeout)
-            response.raise_for_status()
-            total = int(response.headers.get("content-length", 0))
             file_path = os.path.join(folder, filename)
             if os.path.exists(file_path):
                 print(f"Skipping '{filename}' because it already exists.")
+                return
             else:
+                print(f"Downloading {filename} from {url}")
+                response = requests.get(url, stream=True, timeout=timeout)
+                response.raise_for_status()
+                total = int(response.headers.get("content-length", 0))
+
                 with open(file_path, "wb") as out_file, tqdm(
                     desc=filename,
                     total=total,
