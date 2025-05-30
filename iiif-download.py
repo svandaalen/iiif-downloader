@@ -1,8 +1,17 @@
 import argparse
 import os
 import time
+import logging
 import requests
 from tqdm import tqdm
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s - %(levelname)s - %(message)s",
+    datefmt="%Y-%m-%d %H:%M:%S",
+)
+
+logger = logging.getLogger(__name__)
 
 
 def download_image(url, folder, filename):
@@ -13,10 +22,10 @@ def download_image(url, folder, filename):
         try:
             file_path = os.path.join(folder, filename)
             if os.path.exists(file_path):
-                print(f"Skipping '{filename}' because it already exists.")
+                logger.info("Skipping '%s' because it already exists.", filename)
                 return
             else:
-                print(f"Downloading {filename} from {url}")
+                logger.info("Downloading %s from %s", filename, url)
                 response = requests.get(url, stream=True, timeout=timeout)
                 response.raise_for_status()
                 total = int(response.headers.get("content-length", 0))
@@ -31,18 +40,21 @@ def download_image(url, folder, filename):
                     for chunk in response.iter_content(1024):
                         size = out_file.write(chunk)
                         progress_bar.update(size)
-                print(f"Downloaded {filename}")
+                logger.info("Downloaded %s", filename)
                 break
         except (requests.exceptions.Timeout, requests.exceptions.RequestException) as e:
             if attempt < max_retries:
                 wait_time = base_wait * (2 ** (attempt - 1))
-                print(
-                    f"Error occurred: {str(e)}. Attempt {attempt} of {max_retries}. "
-                    f"Retrying in {wait_time} seconds..."
+                logger.warning(
+                    "Error occurred: %s. Attempt %d of %d. Retrying in %d seconds...",
+                    str(e),
+                    attempt,
+                    max_retries,
+                    wait_time,
                 )
                 time.sleep(wait_time)
             else:
-                print(f"Max retries reached. Last error: {str(e)}")
+                logger.error("Max retries reached. Last error: %s", str(e))
                 raise Exception(
                     f"Failed to download {filename} after {max_retries} attempts: {str(e)}"
                 ) from e
@@ -52,7 +64,7 @@ def scrape_images_from_iiif_manifest(manifest_url, download_folder="iiif_images"
     # Fetch the manifest
     response = requests.get(manifest_url, timeout=120)
     if response.status_code != 200:
-        print("Failed to fetch manifest")
+        logger.error("Failed to fetch manifest")
         return
 
     manifest = response.json()
@@ -62,8 +74,8 @@ def scrape_images_from_iiif_manifest(manifest_url, download_folder="iiif_images"
         os.makedirs(download_folder)
 
     if "items" in manifest:
-        print("IIIF v3")
-        print(f"Downloading {len(manifest['items'])} images")
+        logger.info("IIIF v3")
+        logger.info("Downloading %d images", len(manifest["items"]))
         for item in manifest["items"]:
             label = item.get("label", {}).get("none", [""])[0]
             filename = f"{label}.jpg"
@@ -76,13 +88,13 @@ def scrape_images_from_iiif_manifest(manifest_url, download_folder="iiif_images"
                     if image_url:
                         download_image(image_url, download_folder, filename)
                     else:
-                        print("No image URL found in annotation")
+                        logger.warning("No image URL found in annotation")
 
     elif "sequences" in manifest:
-        print("IIIF v2")
+        logger.info("IIIF v2")
         index = 1
         for sequence in manifest["sequences"]:
-            print(f"Downloading {len(sequence['canvases'])} images")
+            logger.info("Downloading %d images", len(sequence["canvases"]))
             for canvas in sequence["canvases"]:
                 filename = (
                     f"{canvas['label']}.jpg" if "label" in canvas else f"{index}.jpg"
@@ -104,7 +116,7 @@ def scrape_images_from_iiif_manifest(manifest_url, download_folder="iiif_images"
                         if "default" in image_url:
                             download_image(image_url, download_folder, filename)
                         else:
-                            print("No image URL found")
+                            logger.warning("No image URL found")
 
 
 if __name__ == "__main__":
