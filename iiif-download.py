@@ -1,28 +1,48 @@
 import argparse
 import os
+import time
 import requests
 from tqdm import tqdm
 
 
 def download_image(url, folder, filename):
-    print(f"Downloading {filename} from {url}")
-    response = requests.get(url, stream=True, timeout=120)
-    total = int(response.headers.get("content-length", 0))
-    if response.status_code == 200:
-        file_path = os.path.join(folder, filename)
-        with open(file_path, "wb") as out_file, tqdm(
-            desc=filename,
-            total=total,
-            unit="iB",
-            unit_scale=True,
-            unit_divisor=1024,
-        ) as progress_bar:
-            for chunk in response.iter_content(1024):
-                size = out_file.write(chunk)
-                progress_bar.update(size)
-        print(f"Downloaded {filename}")
-    else:
-        print(f"Failed to download {filename}")
+    max_retries = 10
+    timeout = 120
+    base_wait = 60
+    for attempt in range(1, max_retries + 1):
+        try:
+            print(f"Downloading {filename} from {url}")
+            response = requests.get(url, stream=True, timeout=timeout)
+            response.raise_for_status()
+            total = int(response.headers.get("content-length", 0))
+            file_path = os.path.join(folder, filename)
+            if os.path.exists(file_path):
+                print(f"Skipping '{filename}' because it already exists.")
+            else:
+                with open(file_path, "wb") as out_file, tqdm(
+                    desc=filename,
+                    total=total,
+                    unit="iB",
+                    unit_scale=True,
+                    unit_divisor=1024,
+                ) as progress_bar:
+                    for chunk in response.iter_content(1024):
+                        size = out_file.write(chunk)
+                        progress_bar.update(size)
+                print(f"Downloaded {filename}")
+                break
+        except requests.exceptions.Timeout:
+            if attempt < max_retries:
+                wait_time = base_wait * (2 ** (attempt - 1))
+                print(
+                    f"Timeout occurred. Attempt {attempt} of {max_retries}. Retrying in {wait_time} seconds..."
+                )
+                time.sleep(wait_time)
+            else:
+                print("Max retries reached.")
+        except requests.exceptions.RequestException as e:
+            print(f"Request failed due to: {e}")
+            break
 
 
 def scrape_images_from_iiif_manifest(manifest_url, download_folder="iiif_images"):
