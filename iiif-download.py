@@ -75,7 +75,8 @@ def scrape_images_from_iiif_manifest(manifest_url, download_folder="iiif_images"
 
     if "items" in manifest:
         logger.info("IIIF v3")
-        logger.info("Downloading %d images", len(manifest["items"]))
+        num_of_images = len(manifest["items"])
+        logger.info("Downloading %d images", num_of_images)
         for item in manifest["items"]:
             label = item.get("label", {}).get("none", [""])[0]
             filename = f"{label}.jpg"
@@ -89,12 +90,14 @@ def scrape_images_from_iiif_manifest(manifest_url, download_folder="iiif_images"
                         download_image(image_url, download_folder, filename)
                     else:
                         logger.warning("No image URL found in annotation")
+        logger.info("Downloaded all images.")
 
     elif "sequences" in manifest:
         logger.info("IIIF v2")
         index = 1
         for sequence in manifest["sequences"]:
-            logger.info("Downloading %d images", len(sequence["canvases"]))
+            num_of_images = len(sequence["canvases"])
+            logger.info("Downloading %d images", num_of_images)
             for canvas in sequence["canvases"]:
                 filename = (
                     f"{canvas['label']}.jpg" if "label" in canvas else f"{index}.jpg"
@@ -117,6 +120,7 @@ def scrape_images_from_iiif_manifest(manifest_url, download_folder="iiif_images"
                             download_image(image_url, download_folder, filename)
                         else:
                             logger.warning("No image URL found")
+        logger.info("Downloaded all images.")
 
 
 if __name__ == "__main__":
